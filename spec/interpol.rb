@@ -12,9 +12,9 @@ class Interpol
 
     def search()
         response = HTTParty.get(
-            "https://ws-public.interpol.int/notices/v1/red?nationality=#{@nationality}&ageMax=100&ageMin=18&sexId=#{@sex}&arrestWarrantCountryId=#{@warrantissuedcountry}&page=1&resultPerPage=200&forename=#{@name}"
+            "https://ws-public.interpol.int/notices/v1/red?nationality=#{@nationality}&ageMax=100&ageMin=18&sexId=#{@sex}&arrestWarrantCountryId=#{@warrantissuedcountry}&page=1&resultPerPage=200&&name=#{@name}"
         )
-        
+
         puts response.body if response.code == 200
     end
 end

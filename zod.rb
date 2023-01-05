@@ -31,22 +31,29 @@ class Zod
     end
 
     def run()
-        OptionParser.new do |parser|
-            parser.on("-spn", "--search-phone-number", "Search phone number") do
-                # TODO add 
-                puts "s"
-            end
-
-            parser.on("-sip", "-search-interpol", "Search given details in database") do 
+        begin
+            case @arguements[0]
+            when "-sip"
                 # TODO ADJUST THIS
+                name = @arguements[1]
+                nationality = @arguements[2]
+                arrestWarrantCountry = @arguements[3]
+                sex = @arguements[4]
+
                 Interpol.new(
                     "umar",
                     "MY",
                     "MY",
                     "M"
                 ).search
-            end 
-        end.parse!
+            when "-sp"
+                puts "l"
+            end
+        rescue => exception
+            puts exception.message
+        else
+            puts "Invalid Command!"
+        end
     end
 end
 
