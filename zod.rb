@@ -28,31 +28,44 @@ class Zod
     def initialize(arguements)
         @arguements = arguements
         @options = {}
+        @exceptionCounter = 0
     end
 
     def run()
         begin
             case @arguements[0]
             when "-sip"
-                # TODO ADJUST THIS
                 name = @arguements[1]
                 nationality = @arguements[2]
                 arrestWarrantCountry = @arguements[3]
                 sex = @arguements[4]
 
-                Interpol.new(
-                    "umar",
-                    "MY",
-                    "MY",
-                    "M"
-                ).search
+                if name.nil?|| nationality.nil?|| arrestWarrantCountry.nil?|| sex.empty?
+                    @exceptionCounter += 1
+                    puts "The {name}, {nationality}, {arrestWarrantCountry} and {sex} must not be empty!"
+                else
+                    Interpol.new(name, nationality, arrestWarrantCountry, sex).search
+                end
+
+            when "-lai"
+                country = @arguements[1]
+
+                if country.nil?
+                    puts "The Nationality is required!"
+                else  
+                    Interpol.new("", country, "", "").listAll
+                end
+
             when "-sp"
                 puts "l"
             end
+            
         rescue => exception
             puts exception.message
         else
-            puts "Invalid Command!"
+            if @exceptionCounter < 0
+                puts "Invalid Command!"
+            end
         end
     end
 end
