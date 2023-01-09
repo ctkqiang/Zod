@@ -34,7 +34,20 @@ class Zod
     def run()
         begin
             case @arguements[0]
-            when "-sip"
+            when "--help"
+                puts <<~END
+                    Usage: ruby zod.rb [options]
+
+                    0ptions:
+
+                        --help, Show this message
+                        --version, Show version
+                        --sip [name][nationality][arrestWarrantCountry][sex], List specific user
+                        --lai List all wanted criminals.
+                    \n
+                END
+
+            when "--sip"
                 name = @arguements[1]
                 nationality = @arguements[2]
                 arrestWarrantCountry = @arguements[3]
@@ -47,7 +60,7 @@ class Zod
                     Interpol.new(name, nationality, arrestWarrantCountry, sex).search
                 end
 
-            when "-lai"
+            when "--lai"
                 country = @arguements[1]
 
                 if country.nil?
@@ -56,8 +69,10 @@ class Zod
                     Interpol.new("", country, "", "").listAll
                 end
 
-            when "-sp"
+            when "--sp"
                 puts "l"
+            when "--version"
+                puts "Project Zod Version." + File.read("./version")
             end
             
         rescue => exception

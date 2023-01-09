@@ -27,7 +27,7 @@ class Interpol
                 body["_embedded"]["notices"][count]["name"],
                 body["_embedded"]["notices"][count]["_links"]["images"]["href"],
                 body["_embedded"]["notices"][count]["_links"]["self"]["href"]
-            ).toMap
+            ).toTable
         end
     end
 
@@ -47,7 +47,7 @@ class Interpol
                 body["_embedded"]["notices"][updatedCount]["name"],
                 body["_embedded"]["notices"][updatedCount]["_links"]["images"]["href"],
                 body["_embedded"]["notices"][updatedCount]["_links"]["self"]["href"]
-            ).toMap
+            ).toTable
         end
     end
 end

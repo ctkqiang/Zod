@@ -7,6 +7,9 @@ GEM
     mini_mime (1.1.2)
     multi_xml (0.6.0)
     optparse (0.3.1)
+    terminal-table (3.0.2)
+      unicode-display_width (>= 1.1.1, < 3)
+    unicode-display_width (2.4.2)
 
 PLATFORMS
   arm64-darwin-21
@@ -14,6 +17,7 @@ PLATFORMS
 DEPENDENCIES
   httparty
   optparse
+  terminal-table
 
 BUNDLED WITH
    2.3.24
