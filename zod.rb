@@ -1,88 +1,124 @@
-require "optparse"
-require_relative "./spec/interpol.rb"
+require 'optparse'
+require 'logger'
+require 'yaml'
+require_relative './spec/interpol.rb'
 
-=begin
-@@author John Melody Me<johnmelodyme@icloud.com>
-MIT License
-Copyright (c) 2023 John Melody Me
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-=end
+class Zod
+  attr_accessor :arguments, :options, :logger, :config
 
-class Zod 
-    attr_accessor :arguements
+  def initialize(arguments)
+    @arguments = arguments
+    @options = {}
+    @exception_counter = 0
+    setup_logger
+    load_config
+    parse_options
+  end
 
-    def initialize(arguements)
-        @arguements = arguements
-        @options = {}
-        @exceptionCounter = 0
+  def setup_logger
+    log_file = @config['log_file'] || 'zod.log'
+    @logger = Logger.new(log_file, 'weekly')
+    @logger.level = Logger::DEBUG
+    @logger.datetime_format = '%Y-%m-%d %H:%M:%S'
+  end
+
+  def load_config
+    config_file = 'config.yml'
+    if File.exist?(config_file)
+      @config = YAML.load_file(config_file)
+    else
+      @config = {}
     end
+  rescue StandardError => e
+    puts "Failed to load configuration: #{e.message}"
+    @config = {}
+  end
 
-    def run()
-        begin
-            case @arguements[0]
-            when "--help"
-                puts <<~END
-                    Usage: ruby zod.rb [options]
+  def parse_options
+    OptionParser.new do |opts|
+      opts.banner = "Usage: ruby zod.rb [options]"
+      opts.separator ""
+      opts.separator "Options:"
 
-                    0ptions:
+      opts.on("--help", "Show this message") do
+        puts opts
+        exit
+      end
 
-                        --help, Show this message
-                        --version, Show version
-                        --sip [name][nationality][arrestWarrantCountry][sex], List specific user
-                        --lai List all wanted criminals.
-                    \n
-                END
+      opts.on("--version", "Show version") do
+        @options[:version] = true
+      end
 
-            when "--sip"
-                name = @arguements[1]
-                nationality = @arguements[2]
-                arrestWarrantCountry = @arguements[3]
-                sex = @arguements[4]
+      opts.on("--sip NAME,NATIONALITY,ARREST_WARRANT_COUNTRY,SEX", Array, "List specific user") do |list|
+        @options[:sip] = list
+      end
 
-                if name.nil?|| nationality.nil?|| arrestWarrantCountry.nil?|| sex.empty?
-                    @exceptionCounter += 1
-                    puts "The {name}, {nationality}, {arrestWarrantCountry} and {sex} must not be empty!"
-                else
-                    Interpol.new(name, nationality, arrestWarrantCountry, sex).search
-                end
+      opts.on("--lai COUNTRY", "List all wanted criminals by nationality") do |country|
+        @options[:lai] = country
+      end
 
-            when "--lai"
-                country = @arguements[1]
+      opts.on("--sp", "Sample option for demonstration") do
+        @options[:sp] = true
+      end
+    end.parse!(@arguments)
+  end
 
-                if country.nil?
-                    puts "The Nationality is required!"
-                else  
-                    Interpol.new("", country, "", "").listAll
-                end
-
-            when "--sp"
-                puts "l"
-            when "--version"
-                puts "Project Zod Version." + File.read("./version")
-            end
-            
-        rescue => exception
-            puts exception.message
-        else
-            if @exceptionCounter < 0
-                puts "Invalid Command!"
-            end
-        end
+  def validate_sip_options(options)
+    options.each do |option|
+      if option.nil? || option.strip.empty?
+        @exception_counter += 1
+        @logger.error("The {name}, {nationality}, {arrestWarrantCountry} and {sex} must not be empty!")
+        return false
+      end
     end
+    true
+  end
+
+  def run
+    case
+    when @options[:version]
+      display_version
+    when @options[:sip]
+      handle_sip_option
+    when @options[:lai]
+      handle_lai_option
+    when @options[:sp]
+      @logger.info("Sample option triggered")
+    else
+      @logger.error("Invalid Command!")
+      puts "Invalid Command! Use --help for more information."
+    end
+  rescue StandardError => e
+    @logger.error("An error occurred: #{e.message}")
+    @logger.debug(e.backtrace.join("\n"))
+  ensure
+    if @exception_counter > 0
+      puts "Encountered #{@exception_counter} error(s). Check logs for details."
+    end
+  end
+
+  private
+
+  def display_version
+    version = File.exist?('./version') ? File.read('./version') : 'Unknown Version'
+    puts "Project Zod Version: #{version}"
+  end
+
+  def handle_sip_option
+    if validate_sip_options(@options[:sip])
+      name, nationality, arrest_warrant_country, sex = @options[:sip]
+      Interpol.new(name, nationality, arrest_warrant_country, sex).search
+    end
+  end
+
+  def handle_lai_option
+    country = @options[:lai]
+    if country.nil? || country.strip.empty?
+      @logger.error("The Nationality is required!")
+    else
+      Interpol.new("", country, "", "").list_all
+    end
+  end
 end
 
 Zod.new(ARGV).run
