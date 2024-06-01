@@ -1,16 +1,22 @@
 require "em-websocket"
 require "securerandom"
 
+require_relative "..//controller/utilities.rb"
+
 connections = {}
 next_user_id = 1
 
 EM.run do
     uid = SecureRandom.hex(18)
+    current_ip = Utilities.new().get_ip
+
+    puts "|Zod Chat Room id:#{SecureRandom.hex(15)} |"
+    puts "|Zod|> hosted -> ws://#{current_ip}\n"
     
-    EM::WebSocket.run(host: "0.0.0.0", port: 8080) do |ws|
+    EM::WebSocket.run(host: "0.0.0.0", port: 8001) do |ws|
         ws.onopen do |handshake|
 
-        puts "|ZOD| New connection: #{uid}"
+        puts "|Zod|> #{uid} Joined Chat"
         
         # Notify other users about the new user
             connections.each do |id, connection|
@@ -19,7 +25,7 @@ EM.run do
         end
         
         ws.onmessage do |msg|
-            puts "|ZOD | Received message from #{uid}: #{msg}"
+            puts "|Zod|> #{uid}: #{msg}"
             
             if msg.start_with?("/")
                 

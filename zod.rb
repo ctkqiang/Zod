@@ -98,7 +98,9 @@ class Zod
   def validate_sip_options(options)
     options.each do |option|
       if option.nil? || option.strip.empty?
+
         @exception_counter += 1
+        
         puts "The name, nationality, arrest warrant country, and sex must not be empty!"
         return false
       end
