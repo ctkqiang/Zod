@@ -1,5 +1,6 @@
 require "optparse"
 require "yaml"
+require "socket"
 require_relative "./spec/interpol.rb"
 require_relative "./controller/downloader.rb"
 
@@ -13,6 +14,7 @@ class Zod
 
     load_config
     parse_options
+    run
   end
 
   def load_config
@@ -52,25 +54,10 @@ class Zod
         @options[:lai] = country
       end
 
-      opts.on("--sp", "Sample option for demonstration") do
-        @options[:sp] = true
-      end
-
-      opts.on("--http", "Scan Everything about the web") do |http_tools|
+      opts.on("--http {Website Url}", "Scan Everything about the web") do |http_tools|
         @options[:http] = http_tools
       end
     end.parse!(@arguments)
-  end
-
-  def validate_sip_options(options)
-    options.each do |option|
-      if option.nil? || option.strip.empty?
-        @exception_counter += 1
-        puts "The name, nationality, arrest warrant country, and sex must not be empty!"
-        return false
-      end
-    end
-    true
   end
 
   def run
@@ -81,10 +68,8 @@ class Zod
       handle_sip_option
     when @options[:lai]
       handle_lai_option
-    when @options[:http_tools]
+    when @options[:http]
       http_tools 
-    when @options[:sp]
-      puts "Sample option triggered"
     else
       puts "Invalid Command! Use --help for more information."
     end
@@ -110,41 +95,44 @@ class Zod
     end
   end
 
-  def get_os
-    host_os = RbConfig::CONFIG["host_os"]
-
-    case host_os
-
-    when /mswin|msys|mingw|cygwin|bccwin|wince|emc/
-      "win"
-    
-    when /darwin|mac os/
-      "mac"
-    
-    when /linux/
-      "linux"
-    
-    when /solaris|bsd/
-      "bsd"
-    
-    else
-      "error"
+  def validate_sip_options(options)
+    options.each do |option|
+      if option.nil? || option.strip.empty?
+        @exception_counter += 1
+        puts "The name, nationality, arrest warrant country, and sex must not be empty!"
+        return false
+      end
     end
+    true
+  end
+
+  def website_to_ip(url)
+    IPSocket.getaddress(url).sub(/^https?:\/\//, "")
   end
 
   def http_tools
-    isWhatWebExisted = run_command("which whatweb > /dev/null 2>&1")
-    isNmapExisted = run_command("which nmap > /dev/null 2>&1")
+    is_whatweb_existed = run_command("which whatweb > /dev/null 2>&1").strip
+    is_nmap_existed = run_command("which nmap").strip
 
-    if get_os == "mac" && !isNmapExisted do
-      begin
-        run_command("brew install nmap --verbose")
-      rescue StandardError => exception
-        puts "HTTP_TOOLS::#{exception.message}"
+    web_addr = ARGV[0]
+    ip_addr = website_to_ip(web_addr)
+
+    if get_os == "mac" 
+      if is_nmap_existed.empty?
+        begin
+          run_command("brew install nmap --verbose")
+        rescue StandardError => exception
+          puts "HTTP_TOOLS::#{exception.message}"
+        end
       end
     else
-      # download Nmap from source
+      if is_nmap_existed.empty?
+        nmap = Downloader.new("repo/", "https://github.com/nmap/nmap.git")
+        nmap.git_clone
+      end
     end
+
+    run_command("sudo nmap --script vuln #{ip_addr}")
   end
 
   def handle_lai_option
@@ -157,14 +145,26 @@ class Zod
   end
 
   def run_command(command)
-    puts "Running |> ：#{command}"
-
     output = `#{command}`
-    puts output
-    
     output
   end
 
+  def get_os
+    host_os = RbConfig::CONFIG["host_os"]
+
+    case host_os
+    when /mswin|msys|mingw|cygwin|bccwin|wince|emc/
+      "win"
+    when /darwin|mac os/
+      "mac"
+    when /linux/
+      "linux"
+    when /solaris|bsd/
+      "bsd"
+    else
+      "error"
+    end
+  end
 end
 
-Zod.new(ARGV).run
+Zod.new(ARGV)

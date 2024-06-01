@@ -1,10 +1,11 @@
 require "uri"
+require "git"
 require "httparty"
 
 class Downloader
-    :attr_accessor :path, :url
+    attr_accessor :path, :url
 
-    def initialize(url)
+    def initialize(path, url)
         puts "Downloader Initializing..."
         
         @url = url
@@ -13,7 +14,7 @@ class Downloader
 
     def git_clone
         begin
-            "git clone #{@url} #{@path} -v"
+            Git.clone(@url, @path)
         rescue StandardError => e
             puts "Git clone failed: #{e.message}"
         else
