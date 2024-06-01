@@ -28,7 +28,7 @@ end
 puts "Connected to #{url}. Type 'exit' to quit."
 
 loop do
-  print "> "
+  print "Zod |> "
   message = gets.chomp
   break if message.downcase == 'exit'
   client.send(message)
