@@ -125,6 +125,8 @@ class Zod
           puts "HTTP_TOOLS::#{exception.message}"
         end
       end
+    elsif get_os == "linux"
+      run_command("apt install nmap")
     else
       if is_nmap_existed.empty?
         nmap = Downloader.new("repo/", "https://github.com/nmap/nmap.git")
