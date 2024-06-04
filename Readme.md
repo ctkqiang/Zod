@@ -1,5 +1,18 @@
 ```bash
-Usage: ruby zod.rb [options]
+johnmelodyme@xinlingxiaobaobeidiannao Zod % ruby zod.rb --help                                           
+  _______________________________________________________
+ /                                                       \
+|    ________________________________________________     |
+|   |                                                |    |
+|   |  Welcome to Zod                                |    |
+|   |  Developed by ctkqiang                         |    |
+|   |________________________________________________|    |
+|_________________________________________________________|
+_______________________________________________________/
+       \_______________________________________/
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Usage => ruby zod.rb [options][arguments]
 
 Options:
         --help                       Show this message
@@ -7,6 +20,5 @@ Options:
         --sip NAME,NATIONALITY,ARREST_WARRANT_COUNTRY,SEX
                                      List specific user
         --lai COUNTRY                List all wanted criminals by nationality
-        --sp                         Sample option for demonstration
-        --http                       Scan Everything about the web
+        --http URL                   Scan Everything about the web
 ```
