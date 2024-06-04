@@ -154,6 +154,21 @@ class Zod
   end
 
   def analyse_mobile_app
+    is_mob_analysis_existed = Dir.exist?("repo/MobileAppAnalyzer")
+    mobile_app_analyzer_repo = "https://github.com/ctkqiang/MobileAppAnalyzer.git"
+
+    if is_mob_analysis_existed
+      puts "Cloning MobileAppAnalyzer..."
+
+      mobile_app_anlayzer = Downloader.new("repo/", "https://github.com/ctkqiang/MobileAppAnalyzer.git")
+      mobile_app_analyzer.git_clone
+    else
+      puts "Drop the path to your .apk/.ipa"
+
+      phone_bin = ARGV[0]
+
+      run_command("cd repo/MobileAppAnalyzer && ruby analyse.rb #{phone_bin} .")
+    end
   end
 
   def get_os
