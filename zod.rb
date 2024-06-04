@@ -33,9 +33,28 @@ class Zod
 
   def parse_options
     OptionParser.new do |opts|
-      opts.banner = "Usage: ruby zod.rb [options]"
-      opts.separator ""
+      opts.banner = <<~HEREDOC
+    _______________________________________________________
+   /                                                       \\
+  |    ________________________________________________     |
+  |   |                                                |    |
+  |   |  Welcome to Zod                                |    |
+  |   |  Developed by ctkqiang                         |    |
+  |   |________________________________________________|    |
+  |_________________________________________________________|
+  \_______________________________________________________/
+         \\_______________________________________/
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Usage => ruby zod.rb [options][arguements]
+
+  HEREDOC
       opts.separator "Options:"
+
+      opts.on("", "/") do
+        puts opts
+        exit
+      end
 
       opts.on("--help", "Show this message") do
         puts opts
@@ -62,14 +81,19 @@ class Zod
 
   def run
     case
+
     when @options[:version]
       display_version
+    
     when @options[:sip]
       handle_sip_option
+    
     when @options[:lai]
       handle_lai_option
+    
     when @options[:http]
       http_tools 
+    
     else
       puts "Invalid Command! Use --help for more information."
     end
@@ -175,14 +199,19 @@ class Zod
     host_os = RbConfig::CONFIG["host_os"]
 
     case host_os
+
     when /mswin|msys|mingw|cygwin|bccwin|wince|emc/
       "win"
+
     when /darwin|mac os/
       "mac"
+
     when /linux/
       "linux"
+
     when /solaris|bsd/
       "bsd"
+
     else
       "error"
     end
