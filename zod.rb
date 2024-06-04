@@ -153,6 +153,9 @@ class Zod
     output
   end
 
+  def analyse_mobile_app
+  end
+
   def get_os
     host_os = RbConfig::CONFIG["host_os"]
 
