@@ -1,8 +1,10 @@
-require "optparse"
-require "yaml"
-require "socket"
-require_relative "./spec/interpol.rb"
-require_relative "./controller/downloader.rb"
+require 'optparse'
+require 'yaml'
+require 'socket'
+require 'thread'
+require 'resolv'
+require 'terminal-table'
+require 'uri'
 
 class Zod
   attr_accessor :arguments, :options, :config
@@ -25,7 +27,7 @@ class Zod
     else
       @config = {}
     end
-  
+
   rescue StandardError => e
     puts "Failed to load configuration: #{e.message}"
     @config = {}
@@ -34,27 +36,22 @@ class Zod
   def parse_options
     OptionParser.new do |opts|
       opts.banner = <<~HEREDOC
-    _______________________________________________________
-   /                                                       \\
-  |    ________________________________________________     |
-  |   |                                                |    |
-  |   |  Welcome to Zod                                |    |
-  |   |  Developed by ctkqiang                         |    |
-  |   |________________________________________________|    |
-  |_________________________________________________________|
-  \_______________________________________________________/
-         \\_______________________________________/
-  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        _______________________________________________________
+       /                                                       \\
+      |    ________________________________________________     |
+      |   |                                                |    |
+      |   |  Welcome to Zod                                |    |
+      |   |  Developed by ctkqiang                         |    |
+      |   |________________________________________________|    |
+      |_________________________________________________________|
+      \_______________________________________________________/
+             \\_______________________________________/
+      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  Usage => ruby zod.rb [options][arguements]
+      Usage => ruby zod.rb [options][arguments]
 
-  HEREDOC
+      HEREDOC
       opts.separator "Options:"
-
-      opts.on("", "/") do
-        puts opts
-        exit
-      end
 
       opts.on("--help", "Show this message") do
         puts opts
@@ -73,7 +70,7 @@ class Zod
         @options[:lai] = country
       end
 
-      opts.on("--http {Website Url}", "Scan Everything about the web") do |http_tools|
+      opts.on("--http URL", "Scan Everything about the web") do |http_tools|
         @options[:http] = http_tools
       end
     end.parse!(@arguments)
@@ -81,19 +78,14 @@ class Zod
 
   def run
     case
-
     when @options[:version]
       display_version
-    
     when @options[:sip]
       handle_sip_option
-    
     when @options[:lai]
       handle_lai_option
-    
     when @options[:http]
-      http_tools 
-    
+      http_tools(@options[:http])
     else
       puts "Invalid Command! Use --help for more information."
     end
@@ -111,7 +103,7 @@ class Zod
     version = File.exist?("./version") ? File.read("./version") : "Unknown Version"
     puts "Project Zod Version: #{version}"
   end
-  
+
   def handle_sip_option
     if validate_sip_options(@options[:sip])
       name, nationality, arrest_warrant_country, sex = @options[:sip]
@@ -122,9 +114,7 @@ class Zod
   def validate_sip_options(options)
     options.each do |option|
       if option.nil? || option.strip.empty?
-
         @exception_counter += 1
-        
         puts "The name, nationality, arrest warrant country, and sex must not be empty!"
         return false
       end
@@ -133,17 +123,104 @@ class Zod
   end
 
   def website_to_ip(url)
-    IPSocket.getaddress(url).sub(/^https?:\/\//, "")
+    uri = URI.parse(url)
+    host = uri.host || url
+    Resolv.getaddress(host)
+  rescue Resolv::ResolvError => e
+    puts "Error: Could not resolve URL '#{url}'."
+    puts "Error details: #{e.message}"
+    nil
   end
 
-  def http_tools
-    is_whatweb_existed = run_command("which whatweb > /dev/null 2>&1").strip
+  def scan_all_ports(ip, num_threads=10)
+    ports = [0x15, 0x16, 0x17, 0x19, 0x1b, 0x19, 0x35, 0x6e, 0x8f, 0xcea, 0xd3d, 0x1f90, 0x1f40, 0xbb8, 0x210b, 0x170c]
+    
+    open_ports = []
+    closed_ports = []
+    mutex = Mutex.new
+    timeout = 0x1
+
+    puts "=> Scanning specific ports for #{ip} with #{num_threads} threads..."
+
+    threads = []
+    ports_queue = Queue.new
+    ports.each { |port| ports_queue << port }
+
+    num_threads.times do
+      threads << Thread.new do
+        while !ports_queue.empty?
+          port = nil
+          mutex.synchronize do
+            port = ports_queue.pop if !ports_queue.empty?
+          end
+
+          next if port.nil?
+
+          begin
+            Timeout.timeout(timeout) do
+              socket = Socket.new(:INET, :STREAM)
+              remote_addr = Socket.sockaddr_in(port, ip)
+
+              puts "=> Checking port #{port}..."
+
+              socket.connect(remote_addr)
+              mutex.synchronize { open_ports << port }
+              
+              puts "=> Port #{port} is open."
+              socket.close
+            end
+          rescue Timeout::Error
+            mutex.synchronize { closed_ports << port }
+            puts "=> Port #{port} is closed (timeout)."
+          rescue Errno::ECONNREFUSED
+            mutex.synchronize { closed_ports << port }
+            puts "=> Port #{port} is closed (connection refused)."
+          rescue Errno::EHOSTUNREACH
+            mutex.synchronize { closed_ports << port }
+            puts "=> Port #{port} is closed (host unreachable)."
+          rescue Errno::ENETUNREACH
+            mutex.synchronize { closed_ports << port }
+            puts "=> Port #{port} is closed (network unreachable)."
+          rescue => e
+            puts "Error on port #{port}: #{e.message}"
+          end
+        end
+      end
+    end
+
+    threads.each(&:join)
+
+    display_results(open_ports, closed_ports)
+
+    { open_ports: open_ports, closed_ports: closed_ports }
+  end
+
+  def display_results(open_ports, closed_ports)
+    table = Terminal::Table.new do |t|
+      t.title = "Port Scan Results"
+      t.headings = ["Port", "Status"]
+
+      open_ports.each do |port|
+        t.add_row([port, "Open"])
+      end
+
+      closed_ports.each do |port|
+        t.add_row([port, "Closed"])
+      end
+    end
+
+    puts table
+  end
+
+  def http_tools(web_addr)
+    ip_addr = website_to_ip(web_addr)
+    return unless ip_addr
+
+    scan_all_ports(ip_addr)
+
     is_nmap_existed = run_command("which nmap").strip
 
-    web_addr = ARGV[0]
-    ip_addr = website_to_ip(web_addr)
-
-    if get_os == "mac" 
+    if get_os == "mac"
       if is_nmap_existed.empty?
         begin
           run_command("brew install nmap --verbose")
@@ -184,7 +261,7 @@ class Zod
     if is_mob_analysis_existed
       puts "Cloning MobileAppAnalyzer..."
 
-      mobile_app_anlayzer = Downloader.new("repo/", "https://github.com/ctkqiang/MobileAppAnalyzer.git")
+      mobile_app_analyzer = Downloader.new("repo/", "https://github.com/ctkqiang/MobileAppAnalyzer.git")
       mobile_app_analyzer.git_clone
     else
       puts "Drop the path to your .apk/.ipa"
@@ -199,19 +276,14 @@ class Zod
     host_os = RbConfig::CONFIG["host_os"]
 
     case host_os
-
     when /mswin|msys|mingw|cygwin|bccwin|wince|emc/
       "win"
-
     when /darwin|mac os/
       "mac"
-
     when /linux/
       "linux"
-
     when /solaris|bsd/
       "bsd"
-
     else
       "error"
     end
