@@ -73,6 +73,19 @@ class Zod
       opts.on("--http URL", "Scan Everything about the web") do |http_tools|
         @options[:http] = http_tools
       end
+
+      opts.on("--chat", "Start Internal Chat") do |start_chat_client|
+        puts "Running ruby zod_chat/client.rb"
+         puts "Running ruby zod_chat/client.rb"
+        @options[:chat] = start_chat_client
+      end
+
+      opts.on("--server", "Start Internal Chat Server") do |start_chat_server|
+        puts "Running ruby zod_chat/server.rb"
+
+        @options[:server] = start_chat_server
+      end
+
     end.parse!(@arguments)
   end
 
@@ -86,6 +99,10 @@ class Zod
       handle_lai_option
     when @options[:http]
       http_tools(@options[:http])
+    when @options[:chat]
+      start_chat_client
+    when @options[:server]
+      start_chat_server
     else
       puts "Invalid Command! Use --help for more information."
     end
@@ -258,18 +275,40 @@ class Zod
     is_mob_analysis_existed = Dir.exist?("repo/MobileAppAnalyzer")
     mobile_app_analyzer_repo = "https://github.com/ctkqiang/MobileAppAnalyzer.git"
 
-    if is_mob_analysis_existed
+    unless is_mob_analysis_existed
       puts "Cloning MobileAppAnalyzer..."
 
-      mobile_app_analyzer = Downloader.new("repo/", "https://github.com/ctkqiang/MobileAppAnalyzer.git")
+      mobile_app_analyzer = Downloader.new("repo/", mobile_app_analyzer_repo)
       mobile_app_analyzer.git_clone
-    else
-      puts "Drop the path to your .apk/.ipa"
-
-      phone_bin = ARGV[0]
-
-      run_command("cd repo/MobileAppAnalyzer && ruby analyse.rb #{phone_bin} .")
     end
+
+    puts "Drop the path to your .apk/.ipa"
+
+    phone_bin = ARGV[0]
+
+    run_command("cd repo/MobileAppAnalyzer && ruby analyse.rb #{phone_bin} .")
+  end
+
+  def bluetooth_ducky
+    is_blue_ducky_existed = Dir.exist?("repo/BlueDucky")
+    blue_ducky_repo = "https://github.com/ctkqiang/BlueDucky.git"
+
+    unless is_blue_ducky_existed
+      puts "Cloning BlueDucky"
+
+      blue_ducky = Downloader.new("repo/", blue_ducky_repo)
+      blue_ducky.git_clone
+    end
+
+    run_command("cd repo/BlueDucky && python3 BlueDucky.py ")
+  end
+
+  def start_chat_client
+    run_command("ruby zod_chat/client.rb")
+  end
+
+  def start_chat_server
+    run_command("ruby zod_chat/server.rb")
   end
 
   def get_os
